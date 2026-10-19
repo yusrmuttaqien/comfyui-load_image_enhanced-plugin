@@ -46,6 +46,12 @@ class LoadImageEnhanced(ComfyNodeABC):
             "required": {
                 "image": (sorted(filtered_files), {"image_upload": True}),
                 "original_filename": ("STRING", {"default": "", "custom_text": True}),
+                # Frontend-only toggle (read by the JS extension, unused in load_image):
+                #   False -> "sync only non-clipspace": original_filename ignores
+                #           MaskEditor (clipspace-*) writes. [default]
+                #   True  -> "always sync": original_filename follows every
+                #           source, including MaskEditor outputs.
+                "sync_maskeditor": ("BOOLEAN", {"default": False}),
             },
         }
 
@@ -102,7 +108,7 @@ class LoadImageEnhanced(ComfyNodeABC):
         # Fallback: return original string and let PIL raise a descriptive error
         return image
 
-    def load_image(self, image: str, original_filename: str = ""):
+    def load_image(self, image: str, original_filename: str = "", sync_maskeditor: bool = False):
         input_dir = folder_paths.get_input_directory()
         image_path = self._resolve_image_path(image)
 
