@@ -27,7 +27,8 @@ app.registerExtension({
         const origCallback = imageWidget.callback;
         imageWidget.callback = (value, ...args) => {
           if (value && typeof value === "string") {
-            // Strip ComfyUI's "[input]"/"[output]" suffix, then take the basename.
+            // Strip ComfyUI's " [input]"/" [output]" suffix (leading space included),
+            // then take the basename.
             const clean = value.replace(/\s*\[(input|output)\]\s*$/, "");
             const newFilename = clean.split(/[\/\\]/).pop();
             const isClipspace = CLIPSACE_PATTERN.test(newFilename);

@@ -160,7 +160,7 @@ class LoadImageEnhanced(ComfyNodeABC):
         return (output_image, output_mask, filename)
 
     @classmethod
-    def IS_CHANGED(s, image):
+    def IS_CHANGED(s, image, **kwargs):
         # Use the same resolution logic to get a valid file path
         temp_node = s()
         image_path = temp_node._resolve_image_path(image)
@@ -174,7 +174,7 @@ class LoadImageEnhanced(ComfyNodeABC):
             return hashlib.sha256(image.encode()).hexdigest()
 
     @classmethod
-    def VALIDATE_INPUTS(s, image):
+    def VALIDATE_INPUTS(s, image, **kwargs):
         if not folder_paths.exists_annotated_filepath(image):
             return "Invalid image file: {}".format(image)
 
