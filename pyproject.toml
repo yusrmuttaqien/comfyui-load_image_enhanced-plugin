@@ -16,3 +16,4 @@ PublisherId = "yusrmuttaqien"
 DisplayName = "Load Image Enhanced"
 Icon = "https://raw.githubusercontent.com/yusrmuttaqien/ComfyUI-LoadImageEnhanced/main/icon.png"
 requires-comfyui = ">=0.3.0"
+
