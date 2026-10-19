@@ -5,7 +5,7 @@ on: [workflow_dispatch, push]
 jobs:
   publish:
     runs-on: ubuntu-latest
-    if: github.event.name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
       - uses: Comfy-Org/publish-node-action@main
