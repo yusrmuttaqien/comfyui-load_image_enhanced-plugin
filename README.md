@@ -5,14 +5,10 @@ This custom node extends ComfyUI's image loading functionality with filename out
 ## Features
 
 ### LoadImageEnhanced
-- **Enhanced Load Image Node**: Based on the original ComfyUI LoadImage node, inheriting from `ComfyNodeABC`
-- **Compatible**: Maintains all original functionality (IMAGE and MASK outputs)
-- **Filename Output**: Returns the filename of the loaded image as a STRING output
+- **Filename Output**: Returns the filename of the loaded image as a STRING output (the original LoadImage node has no filename output)
 - **Original Filename Tracking**: Preserves the original filename even when the image is modified by tools like MaskEditor (toggleable)
 - **Sync MaskEditor Toggle**: `sync_maskeditor` input controls whether `original_filename` follows MaskEditor writes
-- **Multi-frame Support**: Supports animated images (e.g., GIFs) with multi-frame iteration
-- **EXIF Handling**: Automatically applies EXIF orientation rotation
-- **Subfolder Listing**: Recursively lists images from subfolders (excludes `clipspace`, `3d`, `pasted`, and any folder/file starting with `.`)
+- **Recursive Subfolder Listing**: Lists images from all subfolders (the original LoadImage node only lists the top-level input directory); excludes `clipspace`, `3d`, `pasted`, and any folder/file starting with `.`
 
 ## Installation
 
@@ -77,10 +73,6 @@ Without the extension, the `original_filename` field is still available but must
 - Images inside `clipspace`, `3d`, `pasted`, and any hidden (starting with `.`) folders are excluded from the **dropdown listing**
 - Any file starting with `.` (e.g., `.DS_Store`) is also excluded from the listing
 - However, if a downstream node (e.g., mask editor) passes an image path from an excluded folder, the node will still load it correctly
-- Images with multiple frames (e.g., animated GIFs) are processed frame-by-frame and concatenated
-- If no alpha channel is found in an image, a default 64x64 mask is returned
-- The node automatically handles EXIF orientation for proper image display
-- Error messages are printed to console for any files that fail to load
 
 ## Based On
 
