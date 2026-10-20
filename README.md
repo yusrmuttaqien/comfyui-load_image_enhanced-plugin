@@ -8,16 +8,31 @@ This custom node extends ComfyUI's image loading functionality with filename out
 - **Enhanced Load Image Node**: Based on the original ComfyUI LoadImage node, inheriting from `ComfyNodeABC`
 - **Compatible**: Maintains all original functionality (IMAGE and MASK outputs)
 - **Filename Output**: Returns the filename of the loaded image as a STRING output
-- **Original Filename Tracking**: Preserves the original filename even when the image is modified by tools like MaskEditor
+- **Original Filename Tracking**: Preserves the original filename even when the image is modified by tools like MaskEditor (toggleable)
+- **Sync MaskEditor Toggle**: `sync_maskeditor` input controls whether `original_filename` follows MaskEditor writes
 - **Multi-frame Support**: Supports animated images (e.g., GIFs) with multi-frame iteration
 - **EXIF Handling**: Automatically applies EXIF orientation rotation
 - **Subfolder Listing**: Recursively lists images from subfolders (excludes `clipspace`, `3d`, `pasted`, and any folder/file starting with `.`)
 
 ## Installation
 
-1. Place the entire `ComfyUI-LoadImageWithFilename` folder in your ComfyUI `custom_nodes` directory
-2. Restart ComfyUI
-3. The new node will appear in the "image" category
+### ComfyUI Manager / Comfy Registry (recommended)
+
+The node is published to the Comfy Registry as `load-image-enhanced`.
+
+1. Open the ComfyUI Manager (or the Comfy Registry / extensions page).
+2. Search for `load-image-enhanced`.
+3. Click **Install**.
+4. Restart ComfyUI.
+
+### Manual (git clone)
+
+1. Clone the repository into your ComfyUI `custom_nodes` directory:
+   ```bash
+   git clone https://github.com/yusrmuttaqien/ComfyUI-LoadImageEnhanced.git custom_nodes/load-image-enhanced
+   ```
+2. Restart ComfyUI.
+3. The new node will appear in the "image" category.
 
 ## Usage
 
@@ -26,6 +41,7 @@ This custom node extends ComfyUI's image loading functionality with filename out
 - **Inputs**:
   - `image` — Image filename to load
   - `original_filename` — Text field that stores the original selected filename (editable by user)
+  - `sync_maskeditor` — Toggle (default **off**): when off, `original_filename` ignores MaskEditor writes; when on, it follows every source including MaskEditor
 - **Outputs**:
   - `image`: The loaded image tensor
   - `mask`: The image mask (if available)
@@ -42,11 +58,14 @@ This custom node extends ComfyUI's image loading functionality with filename out
 
 ### Filename Tracking
 
-The `filename` output uses the value of the `original_filename` widget. This widget is automatically updated when you select a new image from the dropdown, but is **not** changed by downstream tools like MaskEditor. This means:
+The `filename` output uses the value of the `original_filename` widget, falling back to the loaded file's basename when the widget is empty. The widget is automatically updated when you select a new image from the dropdown. Whether it also follows MaskEditor writes is controlled by the `sync_maskeditor` toggle:
 
-- When you first select an image (e.g., `characters/hero.png`), the filename output is `hero.png`
-- If MaskEditor saves the edited image to `clipspace-painted-xxx.png`, the dropdown updates but the `original_filename` widget stays as `hero.png`
-- The filename output continues to return `hero.png` even after mask edits
+- **`sync_maskeditor` off (default)** — `original_filename` ignores MaskEditor (clipspace) writes:
+  - Select `characters/hero.png` → filename output is `hero.png`
+  - MaskEditor saves to `clipspace-painted-xxx.png` → the dropdown updates, but `original_filename` stays `hero.png`
+  - The filename output continues to return `hero.png`
+- **`sync_maskeditor` on** — `original_filename` follows every source, including MaskEditor:
+  - MaskEditor saves to `clipspace-painted-xxx.png` → `original_filename` updates to `clipspace-painted-xxx.png`
 
 ### Frontend Extension (Automatic)
 
