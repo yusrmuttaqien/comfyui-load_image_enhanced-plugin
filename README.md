@@ -29,7 +29,7 @@ The node is published to the Comfy Registry as `load-image-enhanced`.
 
 1. Clone the repository into your ComfyUI `custom_nodes` directory:
    ```bash
-   git clone https://github.com/yusrmuttaqien/ComfyUI-LoadImageEnhanced.git custom_nodes/load-image-enhanced
+   git clone https://github.com/yusrmuttaqien/comfyui-load_image_enhanced-plugin.git custom_nodes/load-image-enhanced
    ```
 2. Restart ComfyUI.
 3. The new node will appear in the "image" category.

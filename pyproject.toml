@@ -9,11 +9,11 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/yusrmuttaqien/ComfyUI-LoadImageEnhanced"
+Repository = "https://github.com/yusrmuttaqien/comfyui-load_image_enhanced-plugin"
 
 [tool.comfy]
 PublisherId = "yusrmuttaqien"
 DisplayName = "Load Image Enhanced"
-Icon = "https://raw.githubusercontent.com/yusrmuttaqien/ComfyUI-LoadImageEnhanced/main/icon.png"
+Icon = "https://raw.githubusercontent.com/yusrmuttaqien/comfyui-load_image_enhanced-plugin/main/icon.png"
 requires-comfyui = ">=0.3.0"
 

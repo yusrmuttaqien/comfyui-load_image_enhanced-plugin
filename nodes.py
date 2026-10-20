@@ -71,8 +71,8 @@ class LoadImageEnhanced(ComfyNodeABC):
     # {
     #   "author": "yusrmuttaqien",
     #   "title": "ComfyUI-LoadImageEnhanced",
-    #   "reference": "https://github.com/yusrmuttaqien/ComfyUI-LoadImageEnhanced",
-    #   "files": ["https://github.com/yusrmuttaqien/ComfyUI-LoadImageEnhanced"],
+    #   "reference": "https://github.com/yusrmuttaqien/comfyui-load_image_enhanced-plugin",
+    #   "files": ["https://github.com/yusrmuttaqien/comfyui-load_image_enhanced-plugin"],
     #   "install_type": "git-clone",
     #   "description": "Loads an image from the ComfyUI input directory and returns the image tensor, mask, and original filename. The dropdown lists all images recursively from subfolders (excluding hidden folders and 'clipspace'). Supports animated images (GIF, APNG) with multi-frame handling. Optionally specify a custom output filename via the 'original_filename' text field."
     # }
