@@ -175,7 +175,12 @@ class LoadImageEnhanced(ComfyNodeABC):
 
     @classmethod
     def VALIDATE_INPUTS(s, image, **kwargs):
-        if not folder_paths.exists_annotated_filepath(image):
+        # Use the same resolution logic as load_image/IS_CHANGED so that files
+        # in subfolders (e.g. MaskEditor's clipspace/ output on older ComfyUI
+        # versions) pass validation the same way they load.
+        temp_node = s()
+        image_path = temp_node._resolve_image_path(image)
+        if not os.path.isfile(image_path):
             return "Invalid image file: {}".format(image)
 
         return True
