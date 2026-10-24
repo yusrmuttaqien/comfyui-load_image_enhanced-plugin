@@ -58,14 +58,16 @@ class LoadImageEnhanced(ComfyNodeABC):
     CATEGORY = "image"
     DESCRIPTION = (
         "Loads an image from the ComfyUI input directory and returns the image tensor, "
-        "mask, and original filename. The dropdown lists all images recursively from "
-        "subfolders (excluding hidden folders and 'clipspace'). Supports animated images "
-        "(GIF, APNG) with multi-frame handling. Optionally specify a custom output "
-        "filename via the 'original_filename' text field."
+        "mask, original filename, and the original (unmasked) image. The dropdown "
+        "lists all images recursively from subfolders (excluding hidden folders and "
+        "'clipspace'). Supports animated images (GIF, APNG) with multi-frame handling. "
+        "Optionally specify a custom output filename via the 'original_filename' text "
+        "field; the original_image output loads that file so a MaskEditor-masked image "
+        "can be used alongside the unmasked original."
     )
 
-    RETURN_TYPES = ("IMAGE", "MASK", "STRING")
-    RETURN_NAMES = ("image", "mask", "filename")
+    RETURN_TYPES = ("IMAGE", "MASK", "STRING", "IMAGE")
+    RETURN_NAMES = ("image", "mask", "filename", "original_image")
 
     # ComfyUI Manager catalog entry:
     # {
@@ -74,12 +76,13 @@ class LoadImageEnhanced(ComfyNodeABC):
     #   "reference": "https://github.com/yusrmuttaqien/comfyui-load_image_enhanced-plugin",
     #   "files": ["https://github.com/yusrmuttaqien/comfyui-load_image_enhanced-plugin"],
     #   "install_type": "git-clone",
-    #   "description": "Loads an image from the ComfyUI input directory and returns the image tensor, mask, and original filename. The dropdown lists all images recursively from subfolders (excluding hidden folders and 'clipspace'). Supports animated images (GIF, APNG) with multi-frame handling. Optionally specify a custom output filename via the 'original_filename' text field."
+    #   "description": "Loads an image from the ComfyUI input directory and returns the image tensor, mask, original filename, and the original (unmasked) image. The dropdown lists all images recursively from subfolders (excluding hidden folders and 'clipspace'). Supports animated images (GIF, APNG) with multi-frame handling. Optionally specify a custom output filename via the 'original_filename' text field; the original_image output loads that file so a MaskEditor-masked image can be used alongside the unmasked original."
     # }
     OUTPUT_TOOLTIPS = (
         "The loaded image tensor.",
         "The image mask (if available).",
         "The original filename of the loaded image.",
+        "The original (unmasked) image referenced by the original_filename widget. Falls back to the loaded image when the widget is empty or the file can't be resolved.",
     )
     FUNCTION = "load_image"
 
@@ -108,10 +111,8 @@ class LoadImageEnhanced(ComfyNodeABC):
         # Fallback: return original string and let PIL raise a descriptive error
         return image
 
-    def load_image(self, image: str, original_filename: str = "", sync_maskeditor: bool = False):
-        input_dir = folder_paths.get_input_directory()
-        image_path = self._resolve_image_path(image)
-
+    def _load_image(self, image_path):
+        """Load an image file into (image_tensor, mask_tensor)."""
         img = node_helpers.pillow(Image.open, image_path)
 
         output_images = []
@@ -125,17 +126,17 @@ class LoadImageEnhanced(ComfyNodeABC):
 
             if i.mode == 'I':
                 i = i.point(lambda i: i * (1 / 255))
-            image = i.convert("RGB")
+            rgb = i.convert("RGB")
 
             if len(output_images) == 0:
-                w = image.size[0]
-                h = image.size[1]
+                w = rgb.size[0]
+                h = rgb.size[1]
 
-            if image.size[0] != w or image.size[1] != h:
+            if rgb.size[0] != w or rgb.size[1] != h:
                 continue
 
-            image = np.array(image).astype(np.float32) / 255.0
-            image = torch.from_numpy(image)[None,]
+            tensor = np.array(rgb).astype(np.float32) / 255.0
+            tensor = torch.from_numpy(tensor)[None,]
             if 'A' in i.getbands():
                 mask = np.array(i.getchannel('A')).astype(np.float32) / 255.0
                 mask = 1. - torch.from_numpy(mask)
@@ -143,31 +144,55 @@ class LoadImageEnhanced(ComfyNodeABC):
                 mask = np.array(i.convert('RGBA').getchannel('A')).astype(np.float32) / 255.0
                 mask = 1. - torch.from_numpy(mask)
             else:
-                mask = torch.zeros((64,64), dtype=torch.float32, device="cpu")
-            output_images.append(image)
+                mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
+            output_images.append(tensor)
             output_masks.append(mask.unsqueeze(0))
 
         if len(output_images) > 1 and img.format not in excluded_formats:
-            output_image = torch.cat(output_images, dim=0)
-            output_mask = torch.cat(output_masks, dim=0)
+            image = torch.cat(output_images, dim=0)
+            mask = torch.cat(output_masks, dim=0)
         else:
-            output_image = output_images[0]
-            output_mask = output_masks[0]
+            image = output_images[0]
+            mask = output_masks[0]
+
+        return image, mask
+
+    def load_image(self, image: str, original_filename: str = "", sync_maskeditor: bool = False):
+        image_path = self._resolve_image_path(image)
+
+        output_image, output_mask = self._load_image(image_path)
 
         # Use the original_filename widget value if provided; otherwise fall back to current file's basename
         filename = original_filename if original_filename else os.path.basename(image_path)
 
-        return (output_image, output_mask, filename)
+        # Load the original (unmasked) image referenced by original_filename.
+        # Falls back to the loaded image when the widget is empty, the file can't be
+        # resolved, or it's the same file, so the output is always valid.
+        original_image = output_image
+        if original_filename:
+            original_path = self._resolve_image_path(original_filename)
+            if os.path.isfile(original_path) and os.path.abspath(original_path) != os.path.abspath(image_path):
+                original_image, _ = self._load_image(original_path)
+
+        return (output_image, output_mask, filename, original_image)
 
     @classmethod
     def IS_CHANGED(s, image, **kwargs):
         # Use the same resolution logic to get a valid file path
         temp_node = s()
         image_path = temp_node._resolve_image_path(image)
+        original_filename = kwargs.get("original_filename", "")
+        original_path = (
+            temp_node._resolve_image_path(original_filename)
+            if original_filename else None
+        )
         try:
             m = hashlib.sha256()
             with open(image_path, 'rb') as f:
                 m.update(f.read())
+            if original_path and os.path.isfile(original_path):
+                with open(original_path, 'rb') as f:
+                    m.update(f.read())
             return m.digest().hex()
         except (FileNotFoundError, PermissionError):
             # If we can't read the file for hashing, return a hash of the image ref string
