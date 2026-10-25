@@ -1,6 +1,6 @@
 # ComfyUI LoadImageEnhanced
 
-This custom node extends ComfyUI's image loading functionality with a filename output, filename tracking, and an original (unmasked) image output.
+This custom node extends ComfyUI's image loading functionality with a filename output and filename tracking.
 
 ## Features
 
@@ -8,7 +8,6 @@ This custom node extends ComfyUI's image loading functionality with a filename o
 - **Filename Output**: Returns the filename as a STRING output (the original LoadImage node has no filename output)
 - **Filename Tracking**: Preserves the selected filename even when the image is modified by tools like MaskEditor (toggleable)
 - **Sync MaskEditor Toggle**: `sync_maskeditor` input controls whether `filename` follows MaskEditor programmatic saves
-- **Original Image Output**: Returns the unmasked original image (referenced by `filename`) as a separate `original_image` output, so a MaskEditor-masked image can be used alongside the unmasked source
 - **Recursive Subfolder Listing**: Lists images from all subfolders (the original LoadImage node only lists the top-level input directory); excludes `3d`, `pasted`, and any folder/file starting with `.`
 
 ## Installation
@@ -43,7 +42,6 @@ The node is published to the Comfy Registry as `load-image-enhanced`.
   - `image`: The loaded image tensor
   - `mask`: The image mask (if available)
   - `filename`: Always returns the value from the `filename` field. Falls back to the loaded file's basename only when the field is empty
-  - `original_image`: The original (unmasked) image referenced by the `filename` field. Falls back to the loaded image when the field is empty, the file can't be resolved, or it's the same file
 
 ## Requirements
 

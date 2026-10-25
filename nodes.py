@@ -60,16 +60,14 @@ class LoadImageEnhanced(ComfyNodeABC):
     CATEGORY = "image"
     DESCRIPTION = (
         "Loads an image from the ComfyUI input directory and returns the image tensor, "
-        "mask, filename, and the original (unmasked) image. The dropdown lists all "
-        "images recursively from subfolders (excluding hidden folders). Supports "
-        "animated images (GIF, APNG) with multi-frame handling. Optionally specify a "
-        "custom output filename via the 'filename' text field; the original_image "
-        "output loads that file so a MaskEditor-masked image can be used alongside "
-        "the unmasked original."
+        "mask, and filename. The dropdown lists all images recursively from subfolders "
+        "(excluding hidden folders). Supports animated images (GIF, APNG) with "
+        "multi-frame handling. Optionally specify a custom output filename via the "
+        "'filename' text field."
     )
 
-    RETURN_TYPES = ("IMAGE", "MASK", "STRING", "IMAGE")
-    RETURN_NAMES = ("image", "mask", "filename", "original_image")
+    RETURN_TYPES = ("IMAGE", "MASK", "STRING")
+    RETURN_NAMES = ("image", "mask", "filename")
 
     # ComfyUI Manager catalog entry:
     # {
@@ -78,13 +76,12 @@ class LoadImageEnhanced(ComfyNodeABC):
     #   "reference": "https://github.com/yusrmuttaqien/comfyui-load_image_enhanced-plugin",
     #   "files": ["https://github.com/yusrmuttaqien/comfyui-load_image_enhanced-plugin"],
     #   "install_type": "git-clone",
-    #   "description": "Loads an image from the ComfyUI input directory and returns the image tensor, mask, filename, and the original (unmasked) image. The dropdown lists all images recursively from subfolders (excluding hidden folders). Supports animated images (GIF, APNG) with multi-frame handling. Optionally specify a custom output filename via the 'filename' text field; the original_image output loads that file so a MaskEditor-masked image can be used alongside the unmasked original."
+    #   "description": "Loads an image from the ComfyUI input directory and returns the image tensor, mask, and filename. The dropdown lists all images recursively from subfolders (excluding hidden folders). Supports animated images (GIF, APNG) with multi-frame handling. Optionally specify a custom output filename via the 'filename' text field."
     # }
     OUTPUT_TOOLTIPS = (
         "The loaded image tensor.",
         "The image mask (if available).",
         "Always returns the value from the 'filename' field. Falls back to the loaded file's basename only when the field is empty.",
-        "The original (unmasked) image referenced by the 'filename' field. Falls back to the loaded image when the field is empty or the file can't be resolved.",
     )
     FUNCTION = "load_image"
 
@@ -168,34 +165,17 @@ class LoadImageEnhanced(ComfyNodeABC):
         # when the field is empty does it fall back to the loaded file's basename.
         output_filename = filename if filename else os.path.basename(image_path)
 
-        # Load the original (unmasked) image referenced by the 'filename' field.
-        # Falls back to the loaded image when the field is empty, the file can't be
-        # resolved, or it's the same file, so the output is always valid.
-        original_image = output_image
-        if filename:
-            original_path = self._resolve_image_path(filename)
-            if os.path.isfile(original_path) and os.path.abspath(original_path) != os.path.abspath(image_path):
-                original_image, _ = self._load_image(original_path)
-
-        return (output_image, output_mask, output_filename, original_image)
+        return (output_image, output_mask, output_filename)
 
     @classmethod
     def IS_CHANGED(s, image, **kwargs):
         # Use the same resolution logic to get a valid file path
         temp_node = s()
         image_path = temp_node._resolve_image_path(image)
-        filename = kwargs.get("filename", "")
-        original_path = (
-            temp_node._resolve_image_path(filename)
-            if filename else None
-        )
         try:
             m = hashlib.sha256()
             with open(image_path, 'rb') as f:
                 m.update(f.read())
-            if original_path and os.path.isfile(original_path):
-                with open(original_path, 'rb') as f:
-                    m.update(f.read())
             return m.digest().hex()
         except (FileNotFoundError, PermissionError):
             # If we can't read the file for hashing, return a hash of the image ref string

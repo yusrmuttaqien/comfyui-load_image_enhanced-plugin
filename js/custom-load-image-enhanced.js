@@ -70,9 +70,13 @@ app.registerExtension({
             if (isClipspace && isMaskEditorSave) {
               // MaskEditor save: repoint the widget to clipspace/<filename>
               // and refresh the dropdown list with the new entry.
+              // Use setTimeout to avoid re-entering this callback (setNodeWidgetValue
+              // calls widget.callback internally, which would cause an infinite loop).
               const repointed = `clipspace/${newFilename}`;
               ensureInComboOptions(imageWidget, repointed);
-              imageWidget.value = repointed;
+              setTimeout(() => {
+                imageWidget.value = repointed;
+              }, 0);
             } else {
               // Manual selection or non-MaskEditor source: ensure the value
               // is in the combo options.
