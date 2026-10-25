@@ -45,6 +45,14 @@ app.registerExtension({
       const filenameWidget = this.widgets.find((w) => w.name === "filename");
       const syncWidget = this.widgets.find((w) => w.name === "sync_maskeditor");
 
+      // On reload, if the widget value is a clipspace path, add it to the
+      // dropdown list to avoid a false "missing media" error. The repointed
+      // path (clipspace/<filename>) may not exist on disk (the file is in the
+      // input root), so it's not in the static dropdown list.
+      if (imageWidget && isClipspaceValue(imageWidget.value)) {
+        ensureInComboOptions(imageWidget, imageWidget.value);
+      }
+
       if (imageWidget && filenameWidget) {
         const origCallback = imageWidget.callback;
         imageWidget.callback = (value, ...args) => {
@@ -67,8 +75,7 @@ app.registerExtension({
               imageWidget.value = repointed;
             } else {
               // Manual selection or non-MaskEditor source: ensure the value
-              // is in the combo options (handles persisted clipspace values
-              // on reload).
+              // is in the combo options.
               ensureInComboOptions(imageWidget, value);
             }
 
