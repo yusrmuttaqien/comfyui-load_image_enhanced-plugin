@@ -5,25 +5,27 @@ import { app } from "../../scripts/app.js";
 // The native MaskEditor repoints the `image` widget at one of these on save.
 const CLIPSACE_PATTERN = /^clipspace-(painted-masked|mask|paint|painted)-/;
 
-// ComfyUI's missing-media check flags a media input as "missing" when the
-// widget value is not present in the widget's combo options (the dropdown
-// list). clipspace files are excluded from our dropdown listing AND are
-// created at runtime (after the static option list is built), so a persisted
-// clipspace value is never in the options and gets flagged after a reload.
-// Pushing the current value into options.values makes the check pass without
-// cluttering the dropdown with every historical clipspace file.
+// Strip ComfyUI's " [input]"/" [output]" suffix (leading space included).
+function stripTypeSuffix(value) {
+  return value.replace(/\s*\[(input|output)\]\s*$/, "");
+}
+
+// Check if a value is a clipspace filename (after stripping type suffix).
+function isClipspaceValue(value) {
+  if (typeof value !== "string") return false;
+  const clean = stripTypeSuffix(value);
+  return CLIPSACE_PATTERN.test(clean.split(/[\\/]/).pop());
+}
+
+// Add a value to the widget's combo options if not already present.
+// This ensures the frontend's missing-media check passes for runtime-created
+// files (e.g. MaskEditor saves) that are not in the static dropdown list.
 function ensureInComboOptions(widget, value) {
   const values = widget && widget.options && widget.options.values;
   if (Array.isArray(values) && typeof value === "string" && value &&
       !values.includes(value)) {
     values.push(value);
   }
-}
-
-function isClipspaceValue(value) {
-  if (typeof value !== "string") return false;
-  const clean = value.replace(/\s*\[(input|output)\]\s*$/, "");
-  return CLIPSACE_PATTERN.test(clean.split(/[\\/]/).pop());
 }
 
 app.registerExtension({
@@ -43,33 +45,32 @@ app.registerExtension({
       const filenameWidget = this.widgets.find((w) => w.name === "filename");
       const syncWidget = this.widgets.find((w) => w.name === "sync_maskeditor");
 
-      // On reload the persisted clipspace value is not in the static combo
-      // options, so add it back to avoid a false "missing media" error.
-      if (imageWidget && isClipspaceValue(imageWidget.value)) {
-        ensureInComboOptions(imageWidget, imageWidget.value);
-      }
-
       if (imageWidget && filenameWidget) {
         const origCallback = imageWidget.callback;
         imageWidget.callback = (value, ...args) => {
           if (value && typeof value === "string") {
-            // Strip ComfyUI's " [input]"/" [output]" suffix (leading space included),
-            // then take the basename.
-            const clean = value.replace(/\s*\[(input|output)\]\s*$/, "");
-            const newFilename = clean.split(/[\/\\]/).pop();
+            const clean = stripTypeSuffix(value);
+            const newFilename = clean.split(/[\\/]/).pop();
             const isClipspace = CLIPSACE_PATTERN.test(newFilename);
-
-            // Keep the runtime clipspace value in the combo options so the
-            // frontend's missing-media check passes.
-            if (isClipspace) {
-              ensureInComboOptions(imageWidget, value);
-            }
 
             // MaskEditor's programmatic save goes through writeImageWidgetValue,
             // which sets node.properties['image'] = value. A manual
             // dropdown/upload selection does not set that property, so we can
             // distinguish the two.
             const isMaskEditorSave = node.properties?.["image"] === value;
+
+            if (isClipspace && isMaskEditorSave) {
+              // MaskEditor save: repoint the widget to clipspace/<filename>
+              // and refresh the dropdown list with the new entry.
+              const repointed = `clipspace/${newFilename}`;
+              ensureInComboOptions(imageWidget, repointed);
+              imageWidget.value = repointed;
+            } else {
+              // Manual selection or non-MaskEditor source: ensure the value
+              // is in the combo options (handles persisted clipspace values
+              // on reload).
+              ensureInComboOptions(imageWidget, value);
+            }
 
             // sync_maskeditor:
             //   true  -> "always sync": follow every source (incl. MaskEditor
