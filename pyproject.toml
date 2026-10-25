@@ -1,7 +1,7 @@
 [project]
 name = "load-image-enhanced"
-version = "0.4.0"
-description = "Enhanced Load Image node with filename output, original filename tracking, and subfolder listing"
+version = "0.5.0"
+description = "Enhanced Load Image node with filename output, filename tracking, and subfolder listing"
 license = { text = "MIT" }
 requires-python = ">=3.8"
 classifiers = [

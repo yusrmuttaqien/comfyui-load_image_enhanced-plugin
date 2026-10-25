@@ -13,7 +13,7 @@ except ImportError:
     ComfyNodeABC = object  # fallback for older versions
 
 
-EXCLUDED_FOLDERS = {"clipspace", "3d", "pasted"}
+EXCLUDED_FOLDERS = {"3d", "pasted"}
 
 
 def _collect_images_recursive(input_dir):
@@ -45,12 +45,14 @@ class LoadImageEnhanced(ComfyNodeABC):
         return {
             "required": {
                 "image": (sorted(filtered_files), {"image_upload": True}),
-                "original_filename": ("STRING", {"default": "", "custom_text": True}),
+                "filename": ("STRING", {"default": "", "custom_text": True}),
                 # Frontend-only toggle (read by the JS extension, unused in load_image):
-                #   False -> "sync only non-clipspace": original_filename ignores
-                #           MaskEditor (clipspace-*) writes. [default]
-                #   True  -> "always sync": original_filename follows every
-                #           source, including MaskEditor outputs.
+                #   False -> "sync except MaskEditor saves": filename follows
+                #           manual selections (dropdown/upload) and non-clipspace
+                #           sources, but ignores MaskEditor programmatic saves.
+                #           [default]
+                #   True  -> "always sync": filename follows every source,
+                #           including MaskEditor programmatic saves.
                 "sync_maskeditor": ("BOOLEAN", {"default": False}),
             },
         }
@@ -58,12 +60,12 @@ class LoadImageEnhanced(ComfyNodeABC):
     CATEGORY = "image"
     DESCRIPTION = (
         "Loads an image from the ComfyUI input directory and returns the image tensor, "
-        "mask, original filename, and the original (unmasked) image. The dropdown "
-        "lists all images recursively from subfolders (excluding hidden folders and "
-        "'clipspace'). Supports animated images (GIF, APNG) with multi-frame handling. "
-        "Optionally specify a custom output filename via the 'original_filename' text "
-        "field; the original_image output loads that file so a MaskEditor-masked image "
-        "can be used alongside the unmasked original."
+        "mask, filename, and the original (unmasked) image. The dropdown lists all "
+        "images recursively from subfolders (excluding hidden folders). Supports "
+        "animated images (GIF, APNG) with multi-frame handling. Optionally specify a "
+        "custom output filename via the 'filename' text field; the original_image "
+        "output loads that file so a MaskEditor-masked image can be used alongside "
+        "the unmasked original."
     )
 
     RETURN_TYPES = ("IMAGE", "MASK", "STRING", "IMAGE")
@@ -76,13 +78,13 @@ class LoadImageEnhanced(ComfyNodeABC):
     #   "reference": "https://github.com/yusrmuttaqien/comfyui-load_image_enhanced-plugin",
     #   "files": ["https://github.com/yusrmuttaqien/comfyui-load_image_enhanced-plugin"],
     #   "install_type": "git-clone",
-    #   "description": "Loads an image from the ComfyUI input directory and returns the image tensor, mask, original filename, and the original (unmasked) image. The dropdown lists all images recursively from subfolders (excluding hidden folders and 'clipspace'). Supports animated images (GIF, APNG) with multi-frame handling. Optionally specify a custom output filename via the 'original_filename' text field; the original_image output loads that file so a MaskEditor-masked image can be used alongside the unmasked original."
+    #   "description": "Loads an image from the ComfyUI input directory and returns the image tensor, mask, filename, and the original (unmasked) image. The dropdown lists all images recursively from subfolders (excluding hidden folders). Supports animated images (GIF, APNG) with multi-frame handling. Optionally specify a custom output filename via the 'filename' text field; the original_image output loads that file so a MaskEditor-masked image can be used alongside the unmasked original."
     # }
     OUTPUT_TOOLTIPS = (
         "The loaded image tensor.",
         "The image mask (if available).",
-        "The original filename of the loaded image.",
-        "The original (unmasked) image referenced by the original_filename widget. Falls back to the loaded image when the widget is empty or the file can't be resolved.",
+        "Always returns the value from the 'filename' field. Falls back to the loaded file's basename only when the field is empty.",
+        "The original (unmasked) image referenced by the 'filename' field. Falls back to the loaded image when the field is empty or the file can't be resolved.",
     )
     FUNCTION = "load_image"
 
@@ -157,34 +159,35 @@ class LoadImageEnhanced(ComfyNodeABC):
 
         return image, mask
 
-    def load_image(self, image: str, original_filename: str = "", sync_maskeditor: bool = False):
+    def load_image(self, image: str, filename: str = "", sync_maskeditor: bool = False):
         image_path = self._resolve_image_path(image)
 
         output_image, output_mask = self._load_image(image_path)
 
-        # Use the original_filename widget value if provided; otherwise fall back to current file's basename
-        filename = original_filename if original_filename else os.path.basename(image_path)
+        # The filename output always returns the 'filename' field value; only
+        # when the field is empty does it fall back to the loaded file's basename.
+        output_filename = filename if filename else os.path.basename(image_path)
 
-        # Load the original (unmasked) image referenced by original_filename.
-        # Falls back to the loaded image when the widget is empty, the file can't be
+        # Load the original (unmasked) image referenced by the 'filename' field.
+        # Falls back to the loaded image when the field is empty, the file can't be
         # resolved, or it's the same file, so the output is always valid.
         original_image = output_image
-        if original_filename:
-            original_path = self._resolve_image_path(original_filename)
+        if filename:
+            original_path = self._resolve_image_path(filename)
             if os.path.isfile(original_path) and os.path.abspath(original_path) != os.path.abspath(image_path):
                 original_image, _ = self._load_image(original_path)
 
-        return (output_image, output_mask, filename, original_image)
+        return (output_image, output_mask, output_filename, original_image)
 
     @classmethod
     def IS_CHANGED(s, image, **kwargs):
         # Use the same resolution logic to get a valid file path
         temp_node = s()
         image_path = temp_node._resolve_image_path(image)
-        original_filename = kwargs.get("original_filename", "")
+        filename = kwargs.get("filename", "")
         original_path = (
-            temp_node._resolve_image_path(original_filename)
-            if original_filename else None
+            temp_node._resolve_image_path(filename)
+            if filename else None
         )
         try:
             m = hashlib.sha256()

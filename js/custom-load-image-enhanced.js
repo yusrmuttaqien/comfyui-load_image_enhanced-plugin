@@ -38,10 +38,9 @@ app.registerExtension({
     nodeType.prototype.onNodeCreated = function () {
       const result = origOnCreated?.apply(this, arguments);
 
+      const node = this;
       const imageWidget = this.widgets.find((w) => w.name === "image");
-      const filenameWidget = this.widgets.find(
-        (w) => w.name === "original_filename"
-      );
+      const filenameWidget = this.widgets.find((w) => w.name === "filename");
       const syncWidget = this.widgets.find((w) => w.name === "sync_maskeditor");
 
       // On reload the persisted clipspace value is not in the static combo
@@ -66,11 +65,20 @@ app.registerExtension({
               ensureInComboOptions(imageWidget, value);
             }
 
+            // MaskEditor's programmatic save goes through writeImageWidgetValue,
+            // which sets node.properties['image'] = value. A manual
+            // dropdown/upload selection does not set that property, so we can
+            // distinguish the two.
+            const isMaskEditorSave = node.properties?.["image"] === value;
+
             // sync_maskeditor:
-            //   true  -> "always sync": follow every source (incl. MaskEditor)
-            //   false -> "sync only non-clipspace": skip MaskEditor writes
+            //   true  -> "always sync": follow every source (incl. MaskEditor
+            //           programmatic saves)
+            //   false -> "sync except MaskEditor saves": follow manual
+            //           selections (dropdown/upload) and non-clipspace sources,
+            //           but ignore MaskEditor programmatic saves.
             const syncMaskeditor = syncWidget ? syncWidget.value : false;
-            if (syncMaskeditor || !isClipspace) {
+            if (syncMaskeditor || !isClipspace || !isMaskEditorSave) {
               filenameWidget.value = newFilename;
             }
           }

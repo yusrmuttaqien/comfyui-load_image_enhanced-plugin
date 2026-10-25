@@ -1,15 +1,15 @@
 # ComfyUI LoadImageEnhanced
 
-This custom node extends ComfyUI's image loading functionality with filename output, original filename tracking, and an original (unmasked) image output.
+This custom node extends ComfyUI's image loading functionality with a filename output, filename tracking, and an original (unmasked) image output.
 
 ## Features
 
 ### LoadImageEnhanced
-- **Filename Output**: Returns the filename of the loaded image as a STRING output (the original LoadImage node has no filename output)
-- **Original Filename Tracking**: Preserves the original filename even when the image is modified by tools like MaskEditor (toggleable)
-- **Sync MaskEditor Toggle**: `sync_maskeditor` input controls whether `original_filename` follows MaskEditor writes
-- **Original Image Output**: Returns the unmasked original image (referenced by `original_filename`) as a separate `original_image` output, so a MaskEditor-masked image can be used alongside the unmasked source
-- **Recursive Subfolder Listing**: Lists images from all subfolders (the original LoadImage node only lists the top-level input directory); excludes `clipspace`, `3d`, `pasted`, and any folder/file starting with `.`
+- **Filename Output**: Returns the filename as a STRING output (the original LoadImage node has no filename output)
+- **Filename Tracking**: Preserves the selected filename even when the image is modified by tools like MaskEditor (toggleable)
+- **Sync MaskEditor Toggle**: `sync_maskeditor` input controls whether `filename` follows MaskEditor programmatic saves
+- **Original Image Output**: Returns the unmasked original image (referenced by `filename`) as a separate `original_image` output, so a MaskEditor-masked image can be used alongside the unmasked source
+- **Recursive Subfolder Listing**: Lists images from all subfolders (the original LoadImage node only lists the top-level input directory); excludes `3d`, `pasted`, and any folder/file starting with `.`
 
 ## Installation
 
@@ -37,13 +37,13 @@ The node is published to the Comfy Registry as `load-image-enhanced`.
 - **Input**: Select an image file from the dropdown (includes images from subfolders)
 - **Inputs**:
   - `image` — Image filename to load
-  - `original_filename` — Text field that stores the original selected filename (editable by user)
-  - `sync_maskeditor` — Toggle (default **off**): when off, `original_filename` ignores MaskEditor writes; when on, it follows every source including MaskEditor
+  - `filename` — Text field that stores the selected filename (editable by user)
+  - `sync_maskeditor` — Toggle (default **off**): when off, `filename` ignores MaskEditor programmatic saves (but still follows manual dropdown/upload selections); when on, it follows every source including MaskEditor
 - **Outputs**:
   - `image`: The loaded image tensor
   - `mask`: The image mask (if available)
-  - `filename`: The filename of the loaded image
-  - `original_image`: The original (unmasked) image referenced by the `original_filename` widget. Falls back to the loaded image when the widget is empty, the file can't be resolved, or it's the same file
+  - `filename`: Always returns the value from the `filename` field. Falls back to the loaded file's basename only when the field is empty
+  - `original_image`: The original (unmasked) image referenced by the `filename` field. Falls back to the loaded image when the field is empty, the file can't be resolved, or it's the same file
 
 ## Requirements
 
@@ -56,23 +56,24 @@ The node is published to the Comfy Registry as `load-image-enhanced`.
 
 ### Filename Tracking
 
-The `filename` output uses the value of the `original_filename` widget, falling back to the loaded file's basename when the widget is empty. The widget is automatically updated when you select a new image from the dropdown. Whether it also follows MaskEditor writes is controlled by the `sync_maskeditor` toggle:
+The `filename` output always returns the value of the `filename` field, falling back to the loaded file's basename only when the field is empty. The field is automatically updated when you select a new image from the dropdown. Whether it also follows MaskEditor programmatic saves is controlled by the `sync_maskeditor` toggle:
 
-- **`sync_maskeditor` off (default)** — `original_filename` ignores MaskEditor (clipspace) writes:
+- **`sync_maskeditor` off (default)** — `filename` ignores MaskEditor programmatic saves, but still follows manual selections:
   - Select `characters/hero.png` → filename output is `hero.png`
-  - MaskEditor saves to `clipspace-painted-xxx.png` → the dropdown updates, but `original_filename` stays `hero.png`
-  - The filename output continues to return `hero.png`
-- **`sync_maskeditor` on** — `original_filename` follows every source, including MaskEditor:
-  - MaskEditor saves to `clipspace-painted-xxx.png` → `original_filename` updates to `clipspace-painted-xxx.png`
+  - MaskEditor saves to `clipspace-painted-xxx.png` → the dropdown updates, but `filename` stays `hero.png`
+  - Manually select `clipspace-painted-xxx.png` from the dropdown → `filename` updates to `clipspace-painted-xxx.png`
+  - The filename output continues to return the field's value
+- **`sync_maskeditor` on** — `filename` follows every source, including MaskEditor:
+  - MaskEditor saves to `clipspace-painted-xxx.png` → `filename` updates to `clipspace-painted-xxx.png`
 
 ### Frontend Extension (Automatic)
 
-The node includes a frontend extension that automatically syncs the `original_filename` widget when you change the dropdown. It's bundled with the custom node and loads automatically via `WEB_DIRECTORY`.
+The node includes a frontend extension that automatically syncs the `filename` field when you change the dropdown. It's bundled with the custom node and loads automatically via `WEB_DIRECTORY`.
 
-Without the extension, the `original_filename` field is still available but must be manually edited.
+Without the extension, the `filename` field is still available but must be manually edited.
 
 - The node recursively lists all images in the input folder and its subfolders
-- Images inside `clipspace`, `3d`, `pasted`, and any hidden (starting with `.`) folders are excluded from the **dropdown listing**
+- Images inside `3d`, `pasted`, and any hidden (starting with `.`) folders are excluded from the **dropdown listing**
 - Any file starting with `.` (e.g., `.DS_Store`) is also excluded from the listing
 - However, if a downstream node (e.g., mask editor) passes an image path from an excluded folder, the node will still load it correctly
 
