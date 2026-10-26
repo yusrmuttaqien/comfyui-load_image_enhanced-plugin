@@ -63,7 +63,14 @@ class LoadImageEnhanced(ComfyNodeABC):
         "mask, and filename. The dropdown lists all images recursively from subfolders "
         "(excluding hidden folders). Supports animated images (GIF, APNG) with "
         "multi-frame handling. Optionally specify a custom output filename via the "
-        "'filename' text field."
+        "'filename' text field.\n\n"
+        "Note on MaskEditor clipspace files: With ComfyUI_frontend PR #21367 "
+        "(fix/clipspace-subfolder), MaskEditor saves clipspace files to input/clipspace/ "
+        "and the widget value includes the subfolder prefix (e.g. 'clipspace/xxx.png [input]'). "
+        "Without that PR, clipspace files land in the input root and the widget value has "
+        "no subfolder prefix (e.g. 'xxx.png [input]'). This node resolves the file either "
+        "way, but other frontend features (MaskEditor loader, preview) may fail to find "
+        "the file without the PR."
     )
 
     RETURN_TYPES = ("IMAGE", "MASK", "STRING")
@@ -76,7 +83,7 @@ class LoadImageEnhanced(ComfyNodeABC):
     #   "reference": "https://github.com/yusrmuttaqien/comfyui-load_image_enhanced-plugin",
     #   "files": ["https://github.com/yusrmuttaqien/comfyui-load_image_enhanced-plugin"],
     #   "install_type": "git-clone",
-    #   "description": "Loads an image from the ComfyUI input directory and returns the image tensor, mask, and filename. The dropdown lists all images recursively from subfolders (excluding hidden folders). Supports animated images (GIF, APNG) with multi-frame handling. Optionally specify a custom output filename via the 'filename' text field."
+    #   "description": "Loads an image from the ComfyUI input directory and returns the image tensor, mask, and filename. The dropdown lists all images recursively from subfolders (excluding hidden folders). Supports animated images (GIF, APNG) with multi-frame handling. Optionally specify a custom output filename via the 'filename' text field. Note on MaskEditor clipspace files: With ComfyUI_frontend PR #21367 (fix/clipspace-subfolder), MaskEditor saves clipspace files to input/clipspace/ and the widget value includes the subfolder prefix (e.g. 'clipspace/xxx.png [input]'). Without that PR, clipspace files land in the input root and the widget value has no subfolder prefix (e.g. 'xxx.png [input]'). This node resolves the file either way, but other frontend features (MaskEditor loader, preview) may fail to find the file without the PR."
     # }
     OUTPUT_TOOLTIPS = (
         "The loaded image tensor.",
