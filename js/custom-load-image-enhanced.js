@@ -61,25 +61,26 @@ app.registerExtension({
             const newFilename = clean.split(/[\\/]/).pop();
             const isClipspace = CLIPSACE_PATTERN.test(newFilename);
 
-            // MaskEditor's programmatic save goes through writeImageWidgetValue,
-            // which sets node.properties['image'] = value. A manual
-            // dropdown/upload selection does not set that property, so we can
-            // distinguish the two.
-            const isMaskEditorSave = node.properties?.["image"] === value;
-
             // Ensure the value is in the combo options to prevent
             // "Media input missing" warnings. This covers manual selection,
             // upload, and MaskEditor programmatic saves.
             ensureInComboOptions(imageWidget, value);
 
+            // A clipspace value in the widget is a MaskEditor programmatic
+            // save (MaskEditor always saves to clipspace/ files). We detect
+            // it by filename pattern, which is build-agnostic: it does not
+            // depend on node.properties timing, which varies between frontend
+            // builds (with/without the clipspace subfolder PR).
+            //
             // sync_maskeditor:
             //   true  -> "always sync": follow every source (incl. MaskEditor
             //           programmatic saves)
             //   false -> "sync except MaskEditor saves": follow manual
-            //           selections (dropdown/upload) and non-clipspace sources,
-            //           but ignore MaskEditor programmatic saves.
+            //           selections (dropdown/upload), but ignore MaskEditor
+            //           programmatic saves so `filename` keeps the original.
+            const isMaskEditorSave = isClipspace;
             const syncMaskeditor = syncWidget ? syncWidget.value : false;
-            if (syncMaskeditor || !isClipspace || !isMaskEditorSave) {
+            if (syncMaskeditor || !isMaskEditorSave) {
               filenameWidget.value = newFilename;
             }
           }

@@ -59,8 +59,10 @@ The `filename` output always returns the value of the `filename` field, falling 
 - **`sync_maskeditor` off (default)** — `filename` ignores MaskEditor programmatic saves, but still follows manual selections:
   - Select `characters/hero.png` → filename output is `hero.png`
   - MaskEditor saves to `clipspace-painted-xxx.png` → the dropdown updates, but `filename` stays `hero.png`
-  - Manually select `clipspace-painted-xxx.png` from the dropdown → `filename` updates to `clipspace-painted-xxx.png`
+  - Manually select `characters/villain.png` from the dropdown → `filename` updates to `villain.png`
   - The filename output continues to return the field's value
+
+  MaskEditor saves are detected by their `clipspace-` filename prefix (MaskEditor always saves to `clipspace/` files). This is build-agnostic and does not depend on the frontend's internal widget timing. Note: a manual selection of a `clipspace-` file is also treated as a MaskEditor save, so with `sync_maskeditor` off its `filename` won't update.
 - **`sync_maskeditor` on** — `filename` follows every source, including MaskEditor:
   - MaskEditor saves to `clipspace-painted-xxx.png` → `filename` updates to `clipspace-painted-xxx.png`
 
@@ -74,6 +76,13 @@ Without the extension, the `filename` field is still available but must be manua
 - Images inside `3d`, `pasted`, and any hidden (starting with `.`) folders are excluded from the **dropdown listing**
 - Any file starting with `.` (e.g., `.DS_Store`) is also excluded from the listing
 - However, if a downstream node (e.g., mask editor) passes an image path from an excluded folder, the node will still load it correctly
+
+## MaskEditor Clipspace Build Compatibility
+
+This node works with both ComfyUI_frontend builds, with and without [PR #21367](https://github.com/Comfy-Org/ComfyUI_frontend/pull/21367) (`fix/clipspace-subfolder`):
+
+- **With the PR**: MaskEditor saves clipspace files to `input/clipspace/` and the widget value includes the subfolder prefix (e.g., `clipspace/xxx.png [input]`). All frontend features (MaskEditor loader, preview) work correctly.
+- **Without the PR**: Clipspace files land in the input root and the widget value has no subfolder prefix (e.g., `xxx.png [input]`). This node still loads the file correctly, but other frontend features (MaskEditor loader, preview) may fail to find the file.
 
 ## Based On
 
